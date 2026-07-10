@@ -1,0 +1,160 @@
+{
+  "employees": [
+    "Akeen Bernard",
+    "Anthony Quarles",
+    "Sergio Pirela",
+    "John Fabrizio",
+    "Ronnie Baggio",
+    "Aaron Watson",
+    "Jeremiah Bonner",
+    "Achelito Pamphile",
+    "Mike Ryan",
+    "Juan Mandorthupp",
+    "Sai Bore",
+    "TeKiya Walls",
+    "Adrian Wilder",
+    "Travis Jones",
+    "Connor Scott"
+  ],
+  "rotation_queue": [
+    "Ronnie Baggio",
+    "Connor Scott",
+    "Achelito Pamphile",
+    "Sergio Pirela",
+    "Travis Jones",
+    "Juan Mandorthupp",
+    "Anthony Quarles"
+  ],
+  "external_travel": {},
+  "schedules": {
+    "2026-W13": {
+      "Monday": {
+        "ATL68": [
+          "Akeen Bernard",
+          "Anthony Quarles"
+        ],
+        "ATL73": [
+          "Sergio Pirela",
+          "John Fabrizio"
+        ]
+      },
+      "Tuesday": {
+        "ATL68": [
+          "Ronnie Baggio",
+          "Aaron Watson"
+        ],
+        "ATL73": [
+          "Jeremiah Bonner",
+          "Achelito Pamphile"
+        ]
+      },
+      "Wednesday": {
+        "ATL68": [
+          "Mike Ryan",
+          "Juan Mandorthupp"
+        ],
+        "ATL73": [
+          "Sai Bore",
+          "TeKiya Walls"
+        ]
+      },
+      "Thursday": {
+        "ATL68": [
+          "Adrian Wilder",
+          "Travis Jones"
+        ],
+        "ATL73": []
+      }
+    },
+    "2026-W14": {
+      "Monday": {
+        "ATL68": [
+          "Connor Scott"
+        ],
+        "ATL73": []
+      },
+      "Tuesday": {
+        "ATL68": [
+          "Adrian Wilder",
+          "Anthony Quarles"
+        ],
+        "ATL73": [
+          "TeKiya Walls",
+          "Travis Jones"
+        ]
+      },
+      "Wednesday": {
+        "ATL68": [
+          "Mike Ryan",
+          "Sergio Pirela"
+        ],
+        "ATL73": [
+          "Juan Mandorthupp",
+          "Jeremiah Bonner"
+        ]
+      },
+      "Thursday": {
+        "ATL68": [
+          "John Fabrizio",
+          "Sai Bore"
+        ],
+        "ATL73": [
+          "Aaron Watson",
+          "Akeen Bernard"
+        ]
+      }
+    },
+    "2026-W15": {
+      "Monday": {
+        "ATL68": [
+          "Connor Scott",
+          "Ronnie Baggio"
+        ],
+        "ATL73": []
+      },
+      "Tuesday": {
+        "ATL68": [
+          "Achelito Pamphile"
+        ],
+        "ATL73": []
+      },
+      "Wednesday": {
+        "ATL68": [
+          "TeKiya Walls",
+          "John Fabrizio"
+        ],
+        "ATL73": [
+          "Adrian Wilder",
+          "Sai Bore"
+        ]
+      },
+      "Thursday": {
+        "ATL68": [
+          "Mike Ryan",
+          "Aaron Watson"
+        ],
+        "ATL73": [
+          "Akeen Bernard",
+          "Jeremiah Bonner"
+        ]
+      }
+    }
+  },
+  "history": {
+    "Akeen Bernard": 3,
+    "Anthony Quarles": 2,
+    "Sergio Pirela": 2,
+    "John Fabrizio": 3,
+    "Ronnie Baggio": 2,
+    "Aaron Watson": 3,
+    "Jeremiah Bonner": 3,
+    "Achelito Pamphile": 2,
+    "Mike Ryan": 3,
+    "Juan Mandorthupp": 2,
+    "Sai Bore": 3,
+    "TeKiya Walls": 3,
+    "Adrian Wilder": 3,
+    "Travis Jones": 2,
+    "Connor Scott": 2
+  }
+}

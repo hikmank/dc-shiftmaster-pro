@@ -1,0 +1,38 @@
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+
+# Hypothesis testing
+.hypothesis/
+
+# Pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files (keep .env.example, ignore actual .env)
+.env
+
+# SQLite databases
+*.db
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Temp deploy files
+shiftmaster-temp/
+shiftmaster-deploy.zip

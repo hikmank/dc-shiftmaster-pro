@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DC-ShiftMaster Pro</title>
+    <link rel="stylesheet" href="/static/css/theme.css">
+</head>
+<body>
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="sidebar">
+        <div class="sidebar-brand">SM</div>
+        <ul class="nav-list">
+            <li class="nav-item active" data-view="dashboard">
+                <span class="nav-icon">&#x1F4C5;</span>
+                <span class="nav-label">Dashboard</span>
+            </li>
+            <li class="nav-item" data-view="team">
+                <span class="nav-icon">&#x1F465;</span>
+                <span class="nav-label">Team</span>
+            </li>
+            <li class="nav-item" data-view="settings">
+                <span class="nav-icon">&#x2699;&#xFE0F;</span>
+                <span class="nav-label">Settings</span>
+            </li>
+            <li class="nav-item" data-view="export">
+                <span class="nav-icon">&#x1F4E5;</span>
+                <span class="nav-label">Export</span>
+            </li>
+            <li class="nav-item" data-view="coverage">
+                <span class="nav-icon">&#x1F4CB;</span>
+                <span class="nav-label">Coverage</span>
+            </li>
+            <li class="nav-item" data-view="my-shifts">
+                <span class="nav-icon">&#x1F464;</span>
+                <span class="nav-label">My Shifts</span>
+            </li>
+            <li class="nav-item" data-view="profile">
+                <span class="nav-icon">&#x1F9D1;</span>
+                <span class="nav-label">Profile</span>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Header Bar -->
+    <header id="header" class="header">
+        <h1 class="header-title">DC-ShiftMaster Pro</h1>
+        <span id="header-info" class="header-info"></span>
+        <a href="#" class="header-logout" title="Sign out" onclick="API.logout().then(function() { window.location.href = '/'; }); return false;">Logout</a>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="content" class="content">
+        <!-- Dashboard View -->
+        <section id="dashboard-view" class="view">
+            <div id="current-shift-banner" class="current-shift-banner" hidden></div>
+            <div class="view-toolbar">
+                <button id="prev-month" class="btn btn-sm" aria-label="Previous month">&#9664;</button>
+                <span id="month-label" class="month-label"></span>
+                <button id="next-month" class="btn btn-sm" aria-label="Next month">&#9654;</button>
+                <button id="today-btn" class="btn btn-sm btn-primary" style="margin-left:1rem">Today</button>
+                <span id="override-count" class="override-count-badge" hidden></span>
+                <button id="print-btn" class="btn btn-sm" style="margin-left:auto" aria-label="Print calendar">&#x1F5A8;&#xFE0F; Print</button>
+            </div>
+            <div id="color-legend" class="color-legend"></div>
+            <div id="calendar-grid" class="calendar-grid"></div>
+            <div id="monthly-stats" class="monthly-stats"></div>
+        </section>
+
+        <!-- Team View -->
+        <section id="team-view" class="view" hidden>
+            <div class="view-toolbar">
+                <h2>Team Management</h2>
+                <div class="toolbar-actions">
+                    <button id="add-teammate-btn" class="btn btn-primary">+ Add Teammate</button>
+                    <button id="import-csv-btn" class="btn">Import CSV</button>
+                    <button id="export-csv-btn" class="btn">Export CSV</button>
+                    <input type="file" id="csv-file-input" accept=".csv" hidden>
+                </div>
+            </div>
+            <div id="add-teammate-form" class="form-card" hidden></div>
+            <div id="team-hours-warning-container" class="hours-warning-banner-wrapper"></div>
+            <div id="team-list"></div>
+        </section>
+
+        <!-- Settings View -->
+        <section id="settings-view" class="view" hidden></section>
+
+        <!-- Export View -->
+        <section id="export-view" class="view" hidden></section>
+
+        <!-- Coverage View -->
+        <section id="coverage-view" class="view" hidden></section>
+
+        <!-- My Shifts View -->
+        <section id="my-shifts-view" class="view" hidden></section>
+
+        <!-- Profile View -->
+        <section id="profile-view" class="view" hidden></section>
+
+        <!-- Login View -->
+        <section id="login-view" class="view" hidden></section>
+    </main>
+
+    <!-- Bottom Navigation (mobile) -->
+    <nav class="bottom-nav" id="bottom-nav">
+        <ul class="bottom-nav-list">
+            <li class="bottom-nav-item active" data-view="dashboard">
+                <span class="bottom-nav-icon">&#x1F4C5;</span>
+                <span>Calendar</span>
+            </li>
+            <li class="bottom-nav-item" data-view="coverage">
+                <span class="bottom-nav-icon">&#x1F4CB;</span>
+                <span>Coverage</span>
+            </li>
+            <li class="bottom-nav-item" data-view="my-shifts">
+                <span class="bottom-nav-icon">&#x1F464;</span>
+                <span>My Shifts</span>
+            </li>
+            <li class="bottom-nav-item" data-view="team">
+                <span class="bottom-nav-icon">&#x1F465;</span>
+                <span>Team</span>
+            </li>
+            <li class="bottom-nav-item" data-view="settings">
+                <span class="bottom-nav-icon">&#x2699;&#xFE0F;</span>
+                <span>Settings</span>
+            </li>
+            <li class="bottom-nav-item" data-view="profile">
+                <span class="bottom-nav-icon">&#x1F9D1;</span>
+                <span>Profile</span>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Override Modal -->
+    <div id="override-modal" class="modal-overlay" hidden>
+        <div class="modal">
+            <h3 class="modal-title">Set Override</h3>
+            <p id="override-date-label"></p>
+            <div class="form-group">
+                <label for="override-shift-type">Shift</label>
+                <select id="override-shift-type" class="form-control">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Teammate(s)</label>
+                <div id="override-teammate-list" class="override-checkboxes"></div>
+            </div>
+            <div id="hours-warning-container" class="hours-warning-banner-wrapper"></div>
+            <div class="modal-actions">
+                <button id="override-submit" class="btn btn-primary">Save Override</button>
+                <button id="override-remove" class="btn btn-danger">Remove Override</button>
+                <button id="override-cancel" class="btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Compliance Warning Modal -->
+    <div id="compliance-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="compliance-heading" hidden>
+        <div class="modal compliance-modal-content">
+            <h3 id="compliance-heading" class="modal-title">Compliance Warning</h3>
+            <div id="compliance-violations" class="compliance-violations"></div>
+            <div class="modal-actions">
+                <button id="compliance-acknowledge" class="btn btn-primary" aria-label="Acknowledge compliance warnings and proceed with override">Acknowledge &amp; Proceed</button>
+                <button id="compliance-cancel" class="btn" aria-label="Cancel override and close compliance warning">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/toast.js"></script>
+    <script src="/static/js/ws.js"></script>
+    <script src="/static/js/state.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/coverage.js"></script>
+    <script src="/static/js/personal-dashboard.js"></script>
+    <script src="/static/js/profile.js"></script>
+    <script src="/static/js/touch.js"></script>
+    <script src="/static/js/router.js"></script>
+    <script src="/static/js/compliance-modal.js"></script>
+    <script src="/static/js/weekly-summary.js"></script>
+    <script src="/static/js/hours-warning-banner.js"></script>
+    <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/team.js"></script>
+    <script src="/static/js/settings.js"></script>
+    <script src="/static/js/export.js"></script>
+</body>
+</html>
