@@ -283,15 +283,35 @@ var Team = (function () {
         }
     }
 
+    var currentTeammateCount = 0;
+
+    function updateClearAllButton() {
+        var btn = document.getElementById('clear-all-btn');
+        if (btn) {
+            btn.disabled = currentTeammateCount === 0;
+        }
+    }
+
     function load() {
         // Clear the hours warning banner on list refresh since no teammate is actively being edited
         clearTeamBanner();
         API.getTeammates()
-            .then(function (list) { renderList(list || []); })
+            .then(function (list) {
+                var teammates = list || [];
+                currentTeammateCount = teammates.length;
+                renderList(teammates);
+                updateClearAllButton();
+            })
             .catch(function (err) {
                 Toast.show(err.message, 'error');
+                currentTeammateCount = 0;
                 renderList([]);
+                updateClearAllButton();
             });
+        // Initialize the Override Panel if available
+        if (typeof OverridesPanel !== 'undefined' && OverridesPanel.init) {
+            OverridesPanel.init();
+        }
     }
 
     function exportTeamCsv() {
@@ -324,6 +344,97 @@ var Team = (function () {
             .catch(function (err) { Toast.show(err.message, 'error'); });
     }
 
+    /**
+     * Upload a file to a given import endpoint and handle the result.
+     * Displays imported_count, skipped_count, errors, and handles conflicts
+     * by prompting for overwrite.
+     */
+    function handleImportUpload(file, endpoint, fileInputEl) {
+        var fd = new FormData();
+        fd.append('file', file);
+
+        fetch(endpoint, { method: 'POST', body: fd })
+            .then(function (res) {
+                return res.json().then(function (body) {
+                    return { status: res.status, body: body };
+                });
+            })
+            .then(function (result) {
+                var res = result.body;
+
+                // If the response is just an error (400/413), show it and bail
+                if (result.status >= 400 && res.error) {
+                    Toast.show(res.error, 'error');
+                    return;
+                }
+
+                // Build result summary message
+                var parts = [];
+                if (typeof res.imported_count !== 'undefined') {
+                    parts.push('Imported: ' + res.imported_count);
+                }
+                if (typeof res.skipped_count !== 'undefined' && res.skipped_count > 0) {
+                    parts.push('Skipped: ' + res.skipped_count);
+                }
+                if (res.errors && res.errors.length > 0) {
+                    parts.push('Errors: ' + res.errors.length);
+                }
+                var summaryMsg = parts.join(' | ');
+
+                // Show summary toast
+                var toastType = (res.imported_count > 0) ? 'success' : 'error';
+                Toast.show(summaryMsg, toastType);
+
+                // If there are errors, log them for debugging
+                if (res.errors && res.errors.length > 0) {
+                    console.warn('Import errors:', res.errors);
+                }
+
+                // Handle conflicts — offer overwrite
+                if (res.conflicts && res.conflicts.length > 0) {
+                    var conflictDetails = res.conflicts.map(function (c) {
+                        return c.date + ' ' + c.shift_type + ' (existing: ' + c.existing_name + ')';
+                    }).join('\n');
+
+                    var confirmMsg = res.conflicts.length + ' conflict(s) found:\n' +
+                        conflictDetails + '\n\nDo you want to overwrite existing data?';
+
+                    if (confirm(confirmMsg)) {
+                        // Re-upload with overwrite=true
+                        var overwriteFd = new FormData();
+                        overwriteFd.append('file', file);
+                        var overwriteUrl = endpoint + (endpoint.indexOf('?') === -1 ? '?' : '&') + 'overwrite=true';
+
+                        fetch(overwriteUrl, { method: 'POST', body: overwriteFd })
+                            .then(function (res2) {
+                                return res2.json().then(function (body2) {
+                                    return { status: res2.status, body: body2 };
+                                });
+                            })
+                            .then(function (result2) {
+                                var res2 = result2.body;
+                                if (result2.status >= 400 && res2.error) {
+                                    Toast.show(res2.error, 'error');
+                                    return;
+                                }
+                                var msg2 = 'Overwrite complete — Imported: ' + (res2.imported_count || 0);
+                                if (res2.skipped_count > 0) msg2 += ' | Skipped: ' + res2.skipped_count;
+                                Toast.show(msg2, 'success');
+                                load();
+                            })
+                            .catch(function (err) { Toast.show(err.message, 'error'); });
+                    }
+                }
+
+                // Reload team list if anything was imported
+                if (res.imported_count > 0) {
+                    load();
+                }
+            })
+            .catch(function (err) { Toast.show(err.message, 'error'); })
+            .finally(function () { if (fileInputEl) fileInputEl.value = ''; });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('add-teammate-btn').addEventListener('click', showAddForm);
         document.getElementById('export-csv-btn').addEventListener('click', exportTeamCsv);
@@ -344,6 +455,42 @@ var Team = (function () {
                 })
                 .catch(function (err) { Toast.show(err.message, 'error'); })
                 .finally(function () { csvInput.value = ''; });
+        });
+
+        // ICS import button and file picker
+        var icsInput = document.getElementById('ics-file-input');
+        document.getElementById('import-ics-btn').addEventListener('click', function () {
+            icsInput.click();
+        });
+        icsInput.addEventListener('change', function () {
+            if (!icsInput.files.length) return;
+            handleImportUpload(icsInput.files[0], '/api/import/ics', icsInput);
+        });
+
+        // JSON schedule import button and file picker
+        var scheduleJsonInput = document.getElementById('schedule-json-file-input');
+        document.getElementById('import-schedule-json-btn').addEventListener('click', function () {
+            scheduleJsonInput.click();
+        });
+        scheduleJsonInput.addEventListener('change', function () {
+            if (!scheduleJsonInput.files.length) return;
+            handleImportUpload(scheduleJsonInput.files[0], '/api/import/schedule-json', scheduleJsonInput);
+        });
+
+        // Clear All button
+        document.getElementById('clear-all-btn').addEventListener('click', function () {
+            if (currentTeammateCount === 0) return;
+            if (confirm('Remove all ' + currentTeammateCount + ' teammates? This cannot be undone.')) {
+                API.clearAllTeammates()
+                    .then(function (res) {
+                        var count = res && res.deleted ? res.deleted : 0;
+                        Toast.show('Removed ' + count + ' teammates', 'success');
+                        load();
+                    })
+                    .catch(function (err) {
+                        Toast.show(err.message, 'error');
+                    });
+            }
         });
     });
 

@@ -4,7 +4,7 @@ import os
 import tempfile
 from datetime import date
 
-from flask import Blueprint, Response, current_app, jsonify, request
+from flask import Blueprint, Response, current_app, g, jsonify, request
 
 from dc_shiftmaster.csv_export import CSVExporter, JSONExporter, validate_schedule
 from dc_shiftmaster.excel_export import ExcelExporter
@@ -16,9 +16,10 @@ def _compute_and_validate(year: int):
     try:
         db = current_app.config["db"]
         engine = current_app.config["engine"]
-        teammates = db.get_teammates()
-        shift_windows = db.get_shift_windows()
-        overrides = db.get_overrides(year)
+        team_id = getattr(g, 'team_id', None)
+        teammates = db.get_teammates(team_id=team_id)
+        shift_windows = db.get_shift_windows(team_id=team_id)
+        overrides = db.get_overrides(year, team_id=team_id)
         schedule = engine.compute_annual_schedule(year, teammates, shift_windows, overrides)
 
         # Apply date range filter if provided

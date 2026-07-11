@@ -24,6 +24,7 @@ var Export = (function () {
             '<button class="btn" id="exp-csv">&#x1F4C4; Export CSV</button>' +
             '<button class="btn" id="exp-json">&#x1F4CB; Export JSON</button>' +
             '<button class="btn" id="exp-xlsx">&#x1F4CA; Export Excel</button>' +
+            '<button class="btn" id="exp-ics">&#x1F4C5; ICS Calendar</button>' +
             '</div></div>';
 
         // Wire preset buttons
@@ -43,6 +44,7 @@ var Export = (function () {
         wire('exp-csv', 'csv');
         wire('exp-json', 'json');
         wire('exp-xlsx', 'xlsx');
+        wire('exp-ics', 'ics');
     }
 
     function setRange(from, to) {

@@ -799,3 +799,24 @@ body {
 }
 .ws-connected  { background-color: var(--success); }
 .ws-disconnected { background-color: var(--error); }
+
+/* ── Bulk Delete Confirmation Dialog ── */
+.bulk-delete-message {
+    font-size: .9rem;
+    color: var(--text);
+    margin-bottom: .75rem;
+    line-height: 1.4;
+}
+#bulk-delete-phrase-container {
+    margin-bottom: .5rem;
+}
+#bulk-delete-phrase-container label {
+    font-size: .85rem;
+    color: var(--text-muted);
+    margin-bottom: .35rem;
+    display: block;
+}
+#bulk-delete-confirm-btn[disabled] {
+    opacity: .5;
+    cursor: not-allowed;
+}

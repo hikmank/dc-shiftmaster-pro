@@ -74,13 +74,19 @@
                 <div class="toolbar-actions">
                     <button id="add-teammate-btn" class="btn btn-primary">+ Add Teammate</button>
                     <button id="import-csv-btn" class="btn">Import CSV</button>
+                    <button id="import-ics-btn" class="btn">Import ICS</button>
+                    <button id="import-schedule-json-btn" class="btn">Import Schedule</button>
                     <button id="export-csv-btn" class="btn">Export CSV</button>
+                    <button id="clear-all-btn" class="btn btn-danger" disabled>Clear All</button>
                     <input type="file" id="csv-file-input" accept=".csv" hidden>
+                    <input type="file" id="ics-file-input" accept=".ics" hidden>
+                    <input type="file" id="schedule-json-file-input" accept=".json" hidden>
                 </div>
             </div>
             <div id="add-teammate-form" class="form-card" hidden></div>
             <div id="team-hours-warning-container" class="hours-warning-banner-wrapper"></div>
             <div id="team-list"></div>
+            <section id="overrides-panel" class="overrides-panel-container"></section>
         </section>
 
         <!-- Settings View -->
@@ -100,6 +106,9 @@
 
         <!-- Login View -->
         <section id="login-view" class="view" hidden></section>
+
+        <!-- Landing Page View (Team Selection) -->
+        <section id="landing-view" class="view" hidden></section>
     </main>
 
     <!-- Bottom Navigation (mobile) -->
@@ -172,10 +181,27 @@
         </div>
     </div>
 
+    <!-- Bulk Delete Confirmation Modal -->
+    <div id="bulk-delete-confirm-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="bulk-delete-confirm-heading" hidden>
+        <div class="modal">
+            <h3 id="bulk-delete-confirm-heading" class="modal-title">Confirm Deletion</h3>
+            <p id="bulk-delete-confirm-message" class="bulk-delete-message"></p>
+            <div id="bulk-delete-phrase-container" class="form-group" hidden>
+                <label for="bulk-delete-phrase-input">Type <strong>DELETE ALL</strong> to confirm:</label>
+                <input type="text" id="bulk-delete-phrase-input" class="form-control" autocomplete="off" placeholder="DELETE ALL">
+            </div>
+            <div class="modal-actions">
+                <button id="bulk-delete-confirm-btn" class="btn btn-danger" aria-label="Confirm bulk deletion">Confirm</button>
+                <button id="bulk-delete-cancel-btn" class="btn" aria-label="Cancel bulk deletion">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/api.js"></script>
     <script src="/static/js/toast.js"></script>
     <script src="/static/js/ws.js"></script>
     <script src="/static/js/state.js"></script>
+    <script src="/static/js/landing.js"></script>
     <script src="/static/js/auth.js"></script>
     <script src="/static/js/coverage.js"></script>
     <script src="/static/js/personal-dashboard.js"></script>
@@ -186,6 +212,8 @@
     <script src="/static/js/weekly-summary.js"></script>
     <script src="/static/js/hours-warning-banner.js"></script>
     <script src="/static/js/dashboard.js"></script>
+    <script src="/static/js/confirm-dialog.js"></script>
+    <script src="/static/js/overrides-panel.js"></script>
     <script src="/static/js/team.js"></script>
     <script src="/static/js/settings.js"></script>
     <script src="/static/js/export.js"></script>

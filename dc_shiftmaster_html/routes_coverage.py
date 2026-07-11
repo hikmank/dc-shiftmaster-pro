@@ -7,8 +7,9 @@ cancelling coverage requests, plus personal shift/request views.
 import logging
 from datetime import date
 
-from flask import Blueprint, current_app, jsonify, request, session
+from flask import Blueprint, current_app, g, jsonify, request, session
 
+from dc_shiftmaster.database import CrossTeamAccessError
 from dc_shiftmaster_html.broadcast import broadcast_coverage_event
 from dc_shiftmaster_html.email_service import send_coverage_email
 
@@ -57,7 +58,8 @@ def list_coverage():
     """List coverage requests, optionally filtered by ?status=open|claimed|cancelled."""
     db = current_app.config["db"]
     status = request.args.get("status")
-    reqs = db.get_coverage_requests(status=status)
+    team_id = getattr(g, 'team_id', None)
+    reqs = db.get_coverage_requests(status=status, team_id=team_id)
     return jsonify([_coverage_to_dict(r, db) for r in reqs]), 200
 
 
@@ -84,12 +86,13 @@ def create_coverage():
         return jsonify({"error": "shift_type must be 'day' or 'night'"}), 400
 
     db = current_app.config["db"]
+    team_id = getattr(g, 'team_id', None)
     try:
-        req_id = db.create_coverage_request(user_id, req_date, shift_type, note)
+        req_id = db.create_coverage_request(user_id, req_date, shift_type, note, team_id=team_id)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    cr = db.get_coverage_requests()
+    cr = db.get_coverage_requests(team_id=team_id)
     created = next((r for r in cr if r.id == req_id), None)
     try:
         broadcast_coverage_event("created", req_id)
@@ -242,9 +245,10 @@ def my_shifts():
     today = date.today()
     year = today.year
 
-    teammates = db.get_teammates()
-    shift_windows = db.get_shift_windows()
-    overrides = db.get_overrides(year)
+    team_id = getattr(g, 'team_id', None)
+    teammates = db.get_teammates(team_id=team_id)
+    shift_windows = db.get_shift_windows(team_id=team_id)
+    overrides = db.get_overrides(year, team_id=team_id)
 
     slots = engine.compute_annual_schedule(year, teammates, shift_windows, overrides)
 

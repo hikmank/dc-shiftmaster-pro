@@ -1,6 +1,6 @@
 """Schedule API routes for DC-ShiftMaster HTML."""
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, g, jsonify
 
 schedule_bp = Blueprint("schedule", __name__)
 
@@ -16,10 +16,11 @@ def get_schedule(year: int, month: int):
     try:
         db = current_app.config["db"]
         engine = current_app.config["engine"]
+        team_id = getattr(g, 'team_id', None)
 
-        teammates = db.get_teammates()
-        shift_windows = db.get_shift_windows()
-        overrides = db.get_overrides(year)
+        teammates = db.get_teammates(team_id=team_id)
+        shift_windows = db.get_shift_windows(team_id=team_id)
+        overrides = db.get_overrides(year, team_id=team_id)
 
         slots = engine.compute_annual_schedule(year, teammates, shift_windows, overrides)
 

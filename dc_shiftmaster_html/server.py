@@ -10,7 +10,7 @@ import os
 import secrets
 import sys
 
-from flask import Flask, redirect, request, send_from_directory, session, url_for
+from flask import Flask, g, redirect, request, send_from_directory, session, url_for
 from flask_sock import Sock
 
 from dc_shiftmaster.database import DatabaseManager
@@ -72,6 +72,16 @@ def create_app(
     app.config["engine"] = engine
     app.config["region"] = ""
 
+    # --- Run multi-team migration (idempotent) ---
+    from dc_shiftmaster.migration import run_migration, MigrationError
+
+    try:
+        result = run_migration(db.conn)
+        if result["status"] == "success":
+            logger.info("Multi-team migration applied successfully (team_id=%s)", result["team_id"])
+    except MigrationError as exc:
+        logger.error("Multi-team migration failed: %s", exc)
+
     # --- Initialise Flask-Limiter ---
     from dc_shiftmaster_html.extensions import limiter
 
@@ -86,8 +96,11 @@ def create_app(
     from dc_shiftmaster_html.routes_settings import settings_bp
     from dc_shiftmaster_html.routes_export import export_bp
     from dc_shiftmaster_html.routes_import import import_bp
+    from dc_shiftmaster_html.routes_ics import ics_bp
     from dc_shiftmaster_html.routes_auth import auth_bp
     from dc_shiftmaster_html.routes_coverage import coverage_bp
+    from dc_shiftmaster_html.routes_tokens import tokens_bp
+    from dc_shiftmaster_html.routes_profile import profile_bp
 
     app.register_blueprint(schedule_bp)
     app.register_blueprint(teammates_bp)
@@ -95,8 +108,14 @@ def create_app(
     app.register_blueprint(settings_bp)
     app.register_blueprint(export_bp)
     app.register_blueprint(import_bp)
+    app.register_blueprint(ics_bp)
     app.register_blueprint(auth_bp)
     app.register_blueprint(coverage_bp)
+    app.register_blueprint(tokens_bp)
+    app.register_blueprint(profile_bp)
+
+    # --- Register team context middleware (after blueprints) ---
+    from dc_shiftmaster_html.team_middleware import team_context_middleware
 
     # --- Initialise WebSocket support ---
     from dc_shiftmaster_html.ws_routes import init_websocket_routes
@@ -134,21 +153,91 @@ def create_app(
         legacy shared-password session (``authenticated``) so that
         existing sessions keep working after the upgrade.
 
+        Also accepts Bearer token authentication via the Authorization header.
+        Session cookies take precedence over bearer tokens when both are present.
+
         API routes (``/api/``) receive a JSON 401 instead of a redirect
         so that the frontend fetch wrapper can handle it properly.
         """
+        from flask import jsonify as _jsonify
+
         if app.config.get("TESTING"):
+            # In test mode, still process bearer tokens if present to allow
+            # auth gate tests, but skip session-only enforcement
+            auth_header = request.headers.get("Authorization")
+            if auth_header:
+                result = _process_bearer_auth(auth_header)
+                if result is not None:
+                    return result
             return  # skip auth in test mode
+
         allowed = ("/login", "/static/", "/api/auth/login", "/api/auth/register", "/api/public/", "/health")
         if any(request.path == p or request.path.startswith(p) for p in allowed):
             return
+
+        # Check session cookie first (takes precedence per Req 7.3)
         if session.get("user_id") or session.get("authenticated"):
             return
-        # Return JSON 401 for API routes instead of redirecting
+
+        # No valid session — check for Authorization header
+        auth_header = request.headers.get("Authorization")
+        if auth_header:
+            result = _process_bearer_auth(auth_header)
+            if result is not None:
+                return result
+            # If _process_bearer_auth returned None, auth was successful
+            # and g.current_user has been set
+            return
+
+        # No session and no Authorization header — reject
         if request.path.startswith("/api/"):
-            from flask import jsonify as _jsonify
             return _jsonify({"error": "Not authenticated"}), 401
         return redirect(url_for("login"))
+
+    def _process_bearer_auth(auth_header: str):
+        """Process an Authorization header for bearer token authentication.
+
+        Returns None on success (g.current_user is set).
+        Returns a Flask response tuple on failure (401 JSON error).
+        """
+        from flask import jsonify as _jsonify
+        from dc_shiftmaster_html.token_service import TokenService
+
+        # Parse scheme and value
+        parts = auth_header.split(None, 1)
+        if not parts:
+            return _jsonify({"error": "Authentication scheme not supported"}), 401
+
+        scheme = parts[0]
+
+        # Case-insensitive "Bearer" scheme check (Req 7.1)
+        if scheme.lower() != "bearer":
+            return _jsonify({"error": "Authentication scheme not supported"}), 401
+
+        # Check for empty/whitespace token value (Req 7.4)
+        if len(parts) < 2 or not parts[1].strip():
+            return _jsonify({"error": "Bearer token value is missing"}), 401
+
+        raw_token = parts[1].strip()
+
+        # Validate the token via TokenService
+        token_service = TokenService(app.config["db"])
+        user, error_reason = token_service.validate_token_with_reason(raw_token)
+
+        if user is None:
+            return _jsonify({"error": error_reason}), 401
+
+        # On valid token: set g.current_user with user info (Req 2.5)
+        g.current_user = {
+            "user_id": user.id,
+            "username": user.username,
+            "display_name": user.display_name,
+            "role": "user",  # Default role; model has no role field yet
+        }
+        return None  # Success — request proceeds
+
+    # --- Register team context middleware (runs AFTER require_login) ---
+    app.before_request(team_context_middleware)
 
     @app.route("/login", methods=["GET"])
     def login():

@@ -3,8 +3,9 @@
 import csv
 import io
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
+from dc_shiftmaster.database import CrossTeamAccessError
 from dc_shiftmaster.validation import validate_time_format
 
 teammates_bp = Blueprint("teammates", __name__)
@@ -18,7 +19,8 @@ def get_teammates():
     """Return all teammates as JSON array."""
     try:
         db = current_app.config["db"]
-        teammates = db.get_teammates()
+        team_id = getattr(g, 'team_id', None)
+        teammates = db.get_teammates(team_id=team_id)
         return jsonify([
             {
                 "id": t.id,
@@ -64,7 +66,8 @@ def add_teammate():
                 return jsonify({"error": err}), 400
 
         db = current_app.config["db"]
-        new_id = db.add_teammate(name.strip(), shift_type, custom_start, custom_days)
+        team_id = getattr(g, 'team_id', None)
+        new_id = db.add_teammate(name.strip(), shift_type, custom_start, custom_days, team_id=team_id)
         return jsonify({
             "id": new_id,
             "name": name.strip(),
@@ -74,6 +77,18 @@ def add_teammate():
         }), 201
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
+
+
+@teammates_bp.route("/api/teammates/all", methods=["DELETE"])
+def clear_all_teammates():
+    """Delete all teammates for the current team. Returns deleted count."""
+    try:
+        db = current_app.config["db"]
+        team_id = getattr(g, 'team_id', None)
+        deleted = db.clear_all_teammates(team_id)
+        return jsonify({"deleted": deleted}), 200
+    except Exception as exc:
+        return jsonify({"error": f"Failed to clear teammates: {exc}"}), 500
 
 
 @teammates_bp.route("/api/teammates/<int:tid>", methods=["PUT"])
@@ -107,7 +122,8 @@ def update_teammate(tid: int):
                 return jsonify({"error": err}), 400
 
         db = current_app.config["db"]
-        db.update_teammate(tid, name.strip(), shift_type, custom_start, custom_days)
+        team_id = getattr(g, 'team_id', None)
+        db.update_teammate(tid, name.strip(), shift_type, custom_start, custom_days, team_id=team_id)
         return jsonify({
             "id": tid,
             "name": name.strip(),
@@ -115,6 +131,8 @@ def update_teammate(tid: int):
             "custom_start": custom_start,
             "custom_days": custom_days,
         })
+    except CrossTeamAccessError:
+        return jsonify({"error": "Access denied: resource belongs to a different team", "code": "CROSS_TEAM_ACCESS"}), 403
     except Exception as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -124,8 +142,11 @@ def delete_teammate(tid: int):
     """Delete a teammate. Returns 204."""
     try:
         db = current_app.config["db"]
-        db.delete_teammate(tid)
+        team_id = getattr(g, 'team_id', None)
+        db.delete_teammate(tid, team_id=team_id)
         return "", 204
+    except CrossTeamAccessError:
+        return jsonify({"error": "Access denied: resource belongs to a different team", "code": "CROSS_TEAM_ACCESS"}), 403
     except Exception as exc:
         return jsonify({"error": f"Failed to delete teammate: {exc}"}), 500
 
@@ -148,6 +169,7 @@ def import_csv():
         reader = csv.reader(io.StringIO(content))
 
         db = current_app.config["db"]
+        team_id = getattr(g, 'team_id', None)
         imported_count = 0
         skipped_rows = []
 
@@ -183,7 +205,7 @@ def import_csv():
                     continue
                 custom_days = parsed_days
 
-            db.add_teammate(name, shift_type, custom_start, custom_days)
+            db.add_teammate(name, shift_type, custom_start, custom_days, team_id=team_id)
             imported_count += 1
 
         return jsonify({

@@ -59,7 +59,10 @@ function setupGlobals() {
     getYear: function () { return 2025; },
     setYear: function () {},
     getRegion: function () { return ''; },
-    setRegion: function () {}
+    setRegion: function () {},
+    getActiveTeam: function () { return { id: 1, site_code: 'ATL069', display_name: 'ATL069 Team' }; },
+    setActiveTeam: function () {},
+    clearActiveTeam: function () {}
   };
 
   // API stub

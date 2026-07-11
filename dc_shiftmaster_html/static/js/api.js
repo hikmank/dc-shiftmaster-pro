@@ -27,6 +27,7 @@ var API = (function () {
         addTeammate: function (data) { return json('POST', '/api/teammates', data); },
         updateTeammate: function (id, data) { return json('PUT', '/api/teammates/' + id, data); },
         deleteTeammate: function (id) { return request('/api/teammates/' + id, { method: 'DELETE' }); },
+        clearAllTeammates: function () { return request('/api/teammates/all', { method: 'DELETE' }); },
         importCsv: function (file) {
             var fd = new FormData();
             fd.append('file', file);
@@ -73,6 +74,14 @@ var API = (function () {
 
         /* --- Public (no auth) --- */
         getPublicTeammateNames: function () { return request('/api/public/teammate-names'); },
+
+        /* --- Bulk Override Delete --- */
+        bulkDeleteOverrides: function (payload) {
+            return json('DELETE', '/api/overrides/bulk', payload);
+        },
+        previewBulkDelete: function (payload) {
+            return json('POST', '/api/overrides/bulk/preview', payload);
+        },
 
         /* --- Coverage --- */
         getCoverageRequests: function (status) {

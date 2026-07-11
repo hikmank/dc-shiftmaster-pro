@@ -1,7 +1,8 @@
 """Settings API routes for DC-ShiftMaster HTML."""
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, g, jsonify, request
 
+from dc_shiftmaster.database import CrossTeamAccessError
 from dc_shiftmaster.validation import validate_time_format
 
 settings_bp = Blueprint("settings", __name__)
@@ -12,7 +13,8 @@ def get_shift_windows():
     """Return shift windows as JSON object keyed by 'day' and 'night'."""
     try:
         db = current_app.config["db"]
-        windows = db.get_shift_windows()
+        team_id = getattr(g, 'team_id', None)
+        windows = db.get_shift_windows(team_id=team_id)
         return jsonify({
             k: {
                 "shift_type": v.shift_type,
@@ -42,7 +44,8 @@ def update_shift_window(shift_type: str):
 
     try:
         db = current_app.config["db"]
-        db.update_shift_window(shift_type, start_time, end_time)
+        team_id = getattr(g, 'team_id', None)
+        db.update_shift_window(shift_type, start_time, end_time, team_id=team_id)
         return jsonify({
             "shift_type": shift_type,
             "start_time": start_time,
