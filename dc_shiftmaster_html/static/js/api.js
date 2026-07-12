@@ -1,6 +1,8 @@
 /* DC-ShiftMaster Pro — API fetch wrapper */
 var API = (function () {
     async function request(url, opts) {
+        opts = opts || {};
+        opts.credentials = 'same-origin';
         var res = await fetch(url, opts);
         if (!res.ok) {
             var body;
@@ -15,6 +17,7 @@ var API = (function () {
         return request(url, {
             method: method,
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify(data)
         });
     }

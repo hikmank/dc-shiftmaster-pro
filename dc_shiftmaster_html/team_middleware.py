@@ -57,7 +57,12 @@ def team_context_middleware():
     # Validate user still belongs to the active team
     db = current_app.config["db"]
     user_id = session.get("user_id")
-    if not db.is_team_member(user_id, active_team_id):
+    # Also check g.current_user for bearer token auth
+    if not user_id:
+        current_user = getattr(g, "current_user", None)
+        if current_user:
+            user_id = current_user.get("user_id")
+    if not user_id or not db.is_team_member(user_id, active_team_id):
         session.pop("active_team_id", None)
         return jsonify({"error": "Team membership invalid", "code": "INVALID_TEAM"}), 403
 

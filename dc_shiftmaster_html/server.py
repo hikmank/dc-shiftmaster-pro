@@ -54,6 +54,12 @@ def create_app(
         app.secret_key = secrets.token_hex(32)
         logger.warning("SECRET_KEY not set — generated a random key. Sessions will not persist across restarts.")
 
+    # Session cookie configuration — ensure cookies work on plain HTTP deployments
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    # Only set Secure=True when HTTPS is available
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("HTTPS_ENABLED", "").lower() == "true"
+
     # Store host/port for reference by callers
     app.config["HOST"] = host
     app.config["PORT"] = port
