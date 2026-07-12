@@ -53,23 +53,37 @@ def _determine_shift_type(dtstart: str) -> str:
 
 
 def _resolve_name_from_summary(summary: str, roster_names: list[str]) -> str:
-    """Resolve teammate name from SUMMARY against the team roster.
+    """Resolve teammate name(s) from SUMMARY against the team roster.
 
-    SUMMARY format: "{shift_type} Shift - {name1, name2...}"
-    If a roster name is found in the names portion, return it.
-    Otherwise return the full SUMMARY text.
+    Handles oncall ICS format like:
+        [Oncall] serapire@, adriwild@, tekwalls@, and joqtravi@ are Oncall for atl69-dceo-onshift
+        [Oncall] jcwiv@ is Oncall for atl69-dceo-cefm
+
+    Extracts aliases by matching word characters before '@' symbols.
+    Returns a comma-separated string of clean aliases (used as override name).
+
+    Also handles the older format: "{shift_type} Shift - {name1, name2...}"
 
     Args:
         summary: The VEVENT SUMMARY string.
         roster_names: List of teammate names from the current team roster.
 
     Returns:
-        Matched roster name, or full SUMMARY if no match.
+        Comma-separated clean aliases, matched roster name, or full SUMMARY if no match.
     """
+    import re
+
     if not summary:
         return summary
 
-    # Try to extract names after " - " separator
+    # Strategy 1: Extract aliases from oncall-style SUMMARY (words before @)
+    # Matches patterns like: serapire@, adriwild@, jcwiv@
+    alias_matches = re.findall(r'(\w+)@', summary)
+    if alias_matches:
+        # Return comma-separated aliases (scheduling engine splits on comma)
+        return ", ".join(alias_matches)
+
+    # Strategy 2: Try to extract names after " - " separator (legacy format)
     separator = " - "
     if separator in summary:
         names_part = summary.split(separator, 1)[1]
@@ -80,7 +94,7 @@ def _resolve_name_from_summary(summary: str, roster_names: list[str]) -> str:
             if name in roster_names:
                 return name
 
-    # If no separator match, check if any roster name appears in summary
+    # Strategy 3: Check if any roster name appears in summary
     for roster_name in roster_names:
         if roster_name in summary:
             return roster_name

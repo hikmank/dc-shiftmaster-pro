@@ -10,6 +10,7 @@ Ownership rules (based on actual day of week):
     or vice-versa — the key is it flips each week)
 """
 
+import re
 from datetime import date, timedelta
 import calendar
 
@@ -27,6 +28,31 @@ WEDNESDAY = 2
 CYCLE_LENGTH = 14
 
 WEEKDAY_ABBREVS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
+
+def _clean_override_names(raw: str) -> list[str]:
+    """Extract clean teammate aliases from an override name string.
+
+    Handles two formats:
+    1. Oncall-style: Contains '@' symbols — extract word chars before each '@'
+       e.g. "[Oncall] serapire@, adriwild@, tekwells@ are Oncall for..."
+       → ["serapire", "adriwild", "tekwells"]
+    2. Clean comma-separated: Simple "name1, name2, name3"
+       → ["name1", "name2", "name3"]
+
+    Args:
+        raw: The raw override name string from the database.
+
+    Returns:
+        List of clean names/aliases.
+    """
+    if '@' in raw or '[Oncall]' in raw:
+        # Extract aliases: word characters before @
+        aliases = re.findall(r'(\w+)@', raw)
+        if aliases:
+            return aliases
+    # Fallback: simple comma split
+    return [n.strip() for n in raw.split(',') if n.strip()]
 
 
 class SchedulingEngine:
@@ -163,13 +189,13 @@ class SchedulingEngine:
 
             if day_is_override:
                 raw = override_map[day_key]
-                day_names = [n.strip() for n in raw.split(',') if n.strip()]
+                day_names = _clean_override_names(raw)
                 if not day_names:
                     day_names = ['nobody']
                 day_starts = {}
             if night_is_override:
                 raw = override_map[night_key]
-                night_names = [n.strip() for n in raw.split(',') if n.strip()]
+                night_names = _clean_override_names(raw)
                 if not night_names:
                     night_names = ['nobody']
                 night_starts = {}
