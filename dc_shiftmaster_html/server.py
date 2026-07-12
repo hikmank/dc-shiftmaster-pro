@@ -273,6 +273,73 @@ def create_app(
         except Exception as exc:
             return _jsonify({"error": f"Failed to get teammate names: {exc}"}), 500
 
+    @app.route("/api/public/schedule", methods=["GET"])
+    def public_schedule():
+        """Return schedule data without auth. Accepts query params: year, month, region (site_code).
+
+        Examples:
+            /api/public/schedule?year=2026&month=7&region=ATL069
+            /api/public/schedule?year=2026&region=ATL069  (returns all months)
+        """
+        from flask import jsonify as _jsonify
+
+        try:
+            db = app.config["db"]
+            engine = app.config["engine"]
+
+            year = request.args.get("year", type=int)
+            month = request.args.get("month", type=int)
+            region = request.args.get("region", "").strip()
+
+            if not year:
+                return _jsonify({"error": "year query parameter is required"}), 400
+            if year < 1900 or year > 2100:
+                return _jsonify({"error": f"Invalid year {year}"}), 400
+            if month is not None and (month < 1 or month > 12):
+                return _jsonify({"error": f"Invalid month {month}"}), 400
+
+            # Look up team by region (site_code) if provided
+            team_id = None
+            if region:
+                cursor = db.conn.cursor()
+                cursor.execute(
+                    "SELECT id FROM team_profiles WHERE site_code = ?", (region,)
+                )
+                row = cursor.fetchone()
+                if row is None:
+                    return _jsonify({"error": f"Region '{region}' not found"}), 404
+                team_id = row[0]
+
+            teammates = db.get_teammates(team_id=team_id)
+            shift_windows = db.get_shift_windows(team_id=team_id)
+            overrides = db.get_overrides(year, team_id=team_id)
+
+            slots = engine.compute_annual_schedule(year, teammates, shift_windows, overrides)
+
+            # Filter to requested month if provided
+            if month:
+                slots = [s for s in slots if s.date.month == month]
+
+            # Get end times from shift windows
+            day_end = shift_windows["day"].end_time if "day" in shift_windows else "18:30"
+            night_end = shift_windows["night"].end_time if "night" in shift_windows else "06:30"
+
+            result = []
+            for s in slots:
+                result.append({
+                    "date": s.date.isoformat(),
+                    "shift_type": s.shift_type,
+                    "start_time": s.start_time,
+                    "end_time": day_end if s.shift_type == "day" else night_end,
+                    "teammates": s.teammates,
+                    "is_override": s.is_override,
+                    "teammate_starts": s.teammate_starts if s.teammate_starts else {},
+                })
+
+            return _jsonify(result)
+        except Exception as exc:
+            return _jsonify({"error": f"Failed to compute schedule: {exc}"}), 500
+
     # --- Health check endpoint ---
     @app.route("/health", methods=["GET"])
     def health():
